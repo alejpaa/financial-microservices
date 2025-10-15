@@ -7,6 +7,6 @@ import reactor.core.publisher.Mono;
 
 public interface ClienteService {
 
-    public Mono<ClienteDto> findByCodigoUnico(String codigoUnico);
-    public Mono<Cliente> findByCodigoUnico1(String codigoUnico);
+    Mono<ClienteDto> findByCodigoUnico(String codigoUnico);
+    Mono<Cliente> findByCodigoUnico1(String codigoUnico);
 }
