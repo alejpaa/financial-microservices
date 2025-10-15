@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: product-service
+  r2dbc:
+    url: r2dbc:postgresql://localhost:5432/financialdb
+    username: myuser
+    password: mypassword
+    pool:
+      initial-size: 2
+      max-size: 20
+server:
+  port: 8082
