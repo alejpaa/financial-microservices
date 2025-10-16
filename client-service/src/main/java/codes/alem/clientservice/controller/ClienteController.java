@@ -24,11 +24,4 @@ public class ClienteController {
                 .defaultIfEmpty(ResponseEntity.notFound().build());
     }
 
-    @GetMapping("/1/{codigoUnico}")
-    public Mono<ResponseEntity<Cliente>> getClienteByCodigoUnico1(@PathVariable String codigoUnico) {
-        return clienteService.findByCodigoUnico1(codigoUnico)
-                .map(ResponseEntity::ok)
-                .defaultIfEmpty(ResponseEntity.notFound().build());
-    }
-
 }
