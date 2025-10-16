@@ -73,6 +73,21 @@
             <groupId>org.springframework.data</groupId>
             <artifactId>spring-data-relational</artifactId>
         </dependency>
+        <!-- Dependencias para testing con H2 -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.r2dbc</groupId>
+            <artifactId>r2dbc-h2</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.aspectj</groupId>
+            <artifactId>aspectjweaver</artifactId>
+        </dependency>
     </dependencies>
     <dependencyManagement>
         <dependencies>
