@@ -16,10 +16,10 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <modules>
-        <module>config-server</module>
         <module>eureka-server</module>
         <module>client-service</module>
         <module>product-service</module>
+        <module>bff-service</module>
     </modules>
 
     <properties>
