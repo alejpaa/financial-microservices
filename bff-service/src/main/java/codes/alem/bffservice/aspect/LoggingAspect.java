@@ -57,9 +57,8 @@ public class LoggingAspect {
         // Métodos no reactivos
         log.info("▶️ START {}", method);
         try {
-            Object res = result;
             log.info("✅ END {} ({}ms)", method, System.currentTimeMillis() - start);
-            return res;
+            return result;
         } catch (Exception e) {
             log.error("💥 ERROR {} - {}", method, e.getMessage());
             throw e;
