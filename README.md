@@ -21,6 +21,7 @@ La solución cumple con los requerimientos de autenticación OAuth2 (Keycloak), 
 
 ### 🧱 Diagrama de arquitectura
 
+![Arquitectura](./asset/arquitectura.png)
 
 🧩 Todos los servicios están conectados dentro de una red interna de Docker, donde **solo el BFF expone su puerto al exterior.**
 
@@ -93,3 +94,38 @@ Este proceso está registrado mediante **AOP LoggingAspect**.
 
 # Levantar toda la arquitectura
 docker compose up --build
+```
+
+## 🧩 Tracking
+
+Cada petición genera un ID de tracking único (UUID) en el BFF, propagado mediante RequestInterceptor hacia todos los microservicios, visible en los logs (Logback).
+
+## 🧪 Tests
+
+Tests unitarios con JUnit 5.
+
+Mocking de dependencias con Mockito.
+
+Validación de endpoints reactivos con WebTestClient.
+
+## 🧩 Documentación API (OpenAPI)
+
+La API se documenta automáticamente con Swagger UI:
+- URL: `http://localhost:8083/docs`
+
+## 📦 Estructura del repositorio
+```
+financial-services/
+├── bff-service/
+├── client-service/
+├── product-service/
+├── eureka-server/
+├── docker-compose.yml
+└── README.md
+```
+
+## 🧠 Mejoras futuras
+
+- CI/CD con GitHub Actions.
+- Monitoreo con Prometheus + Grafana.
+- Configuración centralizada con Spring Cloud Config.

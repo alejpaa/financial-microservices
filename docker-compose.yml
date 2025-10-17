@@ -64,8 +64,8 @@ services:
       - SPRING_R2DBC_USERNAME=myuser
       - SPRING_R2DBC_PASSWORD=mypassword
       - EUREKA_URL=http://eureka-server:8761/eureka/
-    ports:
-      - "8082:8082"
+#    ports:
+#      - "8082:8082"
     networks:
       - financial-microservices
     depends_on:
@@ -83,8 +83,8 @@ services:
       - SPRING_R2DBC_USERNAME=myuser
       - SPRING_R2DBC_PASSWORD=mypassword
       - EUREKA_URL=http://eureka-server:8761/eureka/
-    ports:
-      - "8081:8081"
+#    ports:
+#      - "8081:8081"
     networks:
       - financial-microservices
     depends_on:
