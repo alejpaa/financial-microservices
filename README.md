@@ -73,13 +73,6 @@ La solución cumple con los requerimientos de autenticación OAuth2 (Keycloak), 
 
 ---
 
-## 🧮 Encriptación del código único
-
-El BFF recibe un `codigoUnico` encriptado → lo desencripta usando un componente `EncryptionService` (basado en AES o BCrypt) antes de consultar los microservicios.  
-Este proceso está registrado mediante **AOP LoggingAspect**.
-
----
-
 ## 🧰 Ejecución del proyecto
 
 ### 🔹 Requisitos previos
