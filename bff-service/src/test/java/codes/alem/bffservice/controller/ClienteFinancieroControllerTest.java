@@ -134,9 +134,8 @@ class ClienteFinancieroControllerTest {
 
         // Then
         StepVerifier.create(resultado)
-                .assertNext(response -> {
-                    assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
-                })
+                .assertNext(response ->
+                        assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode()))
                 .verifyComplete();
     }
 }

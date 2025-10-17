@@ -47,9 +47,7 @@ public class ClienteFinancieroService {
                         log.info(" Consolidando {} productos", productos.size());
                         return clienteMapper.toClienteConProductos(cliente, productos);
                     })
-                    .doFinally(signalType -> {
-                        MDC.clear();
-                    });
+                    .doFinally(signalType -> MDC.clear());
         });
     }
 

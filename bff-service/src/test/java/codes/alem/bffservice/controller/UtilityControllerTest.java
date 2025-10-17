@@ -93,9 +93,8 @@ class UtilityControllerTest {
                 .thenThrow(new RuntimeException("Error en encriptación"));
 
         // When & Then
-        assertThrows(RuntimeException.class, () -> {
-            controller.encryptCode(codigoUnico);
-        });
+        assertThrows(RuntimeException.class, () ->
+                controller.encryptCode(codigoUnico));
     }
 
 }
