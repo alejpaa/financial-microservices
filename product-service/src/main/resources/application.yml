@@ -8,5 +8,8 @@ spring:
     pool:
       initial-size: 2
       max-size: 20
+springdoc:
+  swagger-ui:
+    path: /docs
 server:
   port: 8082

@@ -1,79 +1,94 @@
 package codes.alem.productservice.aspect;
 
 import lombok.extern.slf4j.Slf4j;
-import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.ProceedingJoinPoint;
-import org.aspectj.lang.annotation.*;
+import org.aspectj.lang.annotation.Around;
+import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.annotation.Pointcut;
 import org.slf4j.MDC;
 import org.springframework.stereotype.Component;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-
-import java.util.Arrays;
 
 @Aspect
 @Component
 @Slf4j
 public class LoggingAspect {
 
-    @Pointcut("within(@org.springframework.web.bind.annotation.RestController *)")
-    public void controllerMethods() {}
+    private static final String TRACKING_ID_KEY = "trackingId";
+    private static final String SERVICE_KEY = "service";
+    private static final String SERVICE_NAME = "PRODUCT-SERVICE";
 
-    @Pointcut("within(@org.springframework.stereotype.Service *)")
-    public void serviceMethods() {}
+    @Pointcut("within(@org.springframework.web.bind.annotation.RestController *) || within(@org.springframework.stereotype.Service *)")
+    public void reactiveComponents() {}
 
-    @Around("controllerMethods() || serviceMethods()")
-    public Object logExecutionTime(ProceedingJoinPoint joinPoint) throws Throwable {
-        String className = joinPoint.getTarget().getClass().getSimpleName();
-        String methodName = joinPoint.getSignature().getName();
+    @Around("reactiveComponents()")
+    public Object logAroundReactive(ProceedingJoinPoint pjp) throws Throwable {
+        long start = System.currentTimeMillis();
+        String method = pjp.getSignature().toShortString();
 
-        long startTime = System.currentTimeMillis();
+        Object result = pjp.proceed();
 
-        log.info("Iniciando ejecución: {}.{}", className, methodName);
-        log.debug("Parámetros: {}", Arrays.toString(joinPoint.getArgs()));
+        if (result instanceof Mono<?> mono) {
+            return Mono.deferContextual(ctxView -> {
+                String trackingId = ctxView.getOrDefault(TRACKING_ID_KEY, "N/A");
+                MDC.put(TRACKING_ID_KEY, trackingId);
+                MDC.put(SERVICE_KEY, SERVICE_NAME);
 
-        try {
-            Object result = joinPoint.proceed();
+                log.info("▶️ START {}", method);
 
-            if (result instanceof Mono) {
-                return ((Mono<?>) result)
-                    .doOnSuccess(value -> {
-                        long duration = System.currentTimeMillis() - startTime;
-                        log.info("Completado exitosamente: {}.{} en {}ms", className, methodName, duration);
-                    })
-                    .doOnError(error -> {
-                        long duration = System.currentTimeMillis() - startTime;
-                        log.error("Error en ejecución: {}.{} después de {}ms - Error: {}",
-                                className, methodName, duration, error.getMessage());
-                    });
-            } else if (result instanceof Flux) {
-                return ((Flux<?>) result)
-                    .doOnComplete(() -> {
-                        long duration = System.currentTimeMillis() - startTime;
-                        log.info("Completado exitosamente: {}.{} en {}ms", className, methodName, duration);
-                    })
-                    .doOnError(error -> {
-                        long duration = System.currentTimeMillis() - startTime;
-                        log.error("Error en ejecución: {}.{} después de {}ms - Error: {}",
-                                className, methodName, duration, error.getMessage());
-                    });
-            } else {
-                long duration = System.currentTimeMillis() - startTime;
-                log.info("Completado exitosamente: {}.{} en {}ms", className, methodName, duration);
-                return result;
-            }
-        } catch (Exception e) {
-            long duration = System.currentTimeMillis() - startTime;
-            log.error("Error en ejecución: {}.{} después de {}ms - Error: {}",
-                    className, methodName, duration, e.getMessage());
-            throw e;
+                return mono
+                        .doOnSuccess(v -> {
+                            MDC.put(TRACKING_ID_KEY, trackingId);
+                            MDC.put(SERVICE_KEY, SERVICE_NAME);
+                            log.info("✅ END {} ({}ms)", method, System.currentTimeMillis() - start);
+                        })
+                        .doOnError(e -> {
+                            MDC.put(TRACKING_ID_KEY, trackingId);
+                            MDC.put(SERVICE_KEY, SERVICE_NAME);
+                            log.error("💥 ERROR {} - {}", method, e.getMessage());
+                        })
+                        .doFinally(st -> MDC.clear());
+            });
         }
-    }
 
-    @Before("controllerMethods()")
-    public void logControllerAccess(JoinPoint joinPoint) {
-        String className = joinPoint.getTarget().getClass().getSimpleName();
-        String methodName = joinPoint.getSignature().getName();
-        log.info("Acceso a endpoint: {}.{}", className, methodName);
+        if (result instanceof Flux<?> flux) {
+            return Flux.deferContextual(ctxView -> {
+                String trackingId = ctxView.getOrDefault(TRACKING_ID_KEY, "N/A");
+                MDC.put(TRACKING_ID_KEY, trackingId);
+                MDC.put(SERVICE_KEY, SERVICE_NAME);
+
+                log.info("▶️ START {}", method);
+
+                return flux
+                        .doOnComplete(() -> {
+                            MDC.put(TRACKING_ID_KEY, trackingId);
+                            MDC.put(SERVICE_KEY, SERVICE_NAME);
+                            log.info("✅ END {} ({}ms)", method, System.currentTimeMillis() - start);
+                        })
+                        .doOnError(e -> {
+                            MDC.put(TRACKING_ID_KEY, trackingId);
+                            MDC.put(SERVICE_KEY, SERVICE_NAME);
+                            log.error("💥 ERROR {} - {}", method, e.getMessage());
+                        })
+                        .doFinally(st -> MDC.clear());
+            });
+        }
+
+        // Métodos no reactivos
+        MDC.put(SERVICE_KEY, SERVICE_NAME);
+        MDC.put(TRACKING_ID_KEY, "N/A");
+
+        log.info("▶️ START {}", method);
+        try {
+            Object resultSync = pjp.proceed();
+            log.info("✅ END {} ({}ms)", method, System.currentTimeMillis() - start);
+            return resultSync;
+        } catch (Exception e) {
+            log.error("💥 ERROR {} - {}", method, e.getMessage());
+            throw e;
+        } finally {
+            MDC.clear();
+        }
     }
 }
