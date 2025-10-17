@@ -8,5 +8,4 @@ import reactor.core.publisher.Mono;
 public interface ClienteService {
 
     Mono<ClienteDto> findByCodigoUnico(String codigoUnico);
-    Mono<Cliente> findByCodigoUnico1(String codigoUnico);
 }

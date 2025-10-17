@@ -22,7 +22,6 @@ public class ClienteServiceImpl implements ClienteService {
     @Override
     public Mono<ClienteDto> findByCodigoUnico(String codigoUnico) {
         return clienteRepository.findByCodigoUnico(codigoUnico).
-                doOnNext(c -> log.info("Cliente encontrado: {}", c)).
                 flatMap(c -> tipoDocumentoRepository.findById(c.getTipoDocumentoId())
                         .map(td -> {
                             ClienteDto dto = clienteMapper.toDto(c);
@@ -30,9 +29,5 @@ public class ClienteServiceImpl implements ClienteService {
                             return dto;
                         }));
 
-    }
-    @Override
-    public Mono<Cliente> findByCodigoUnico1(String codigoUnico) {
-        return clienteRepository.findByCodigoUnico(codigoUnico);
     }
 }
