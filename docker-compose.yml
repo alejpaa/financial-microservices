@@ -11,6 +11,8 @@ services:
       - POSTGRES_USER=myuser
       - POSTGRES_PASSWORD=mypassword
       - POSTGRES_DB=financialdb
+    networks:
+      - financial-microservices
   keycloak:
     image: quay.io/keycloak/keycloak:26.0.0
     container_name: keycloak
@@ -20,6 +22,7 @@ services:
     environment:
       - KEYCLOAK_ADMIN=admin
       - KEYCLOAK_ADMIN_PASSWORD=admin
+      - KC_HOSTNAME=localhost
     command: ["start-dev"]
     volumes:
       - keycloak_data:/opt/keycloak/data
@@ -27,6 +30,69 @@ services:
       - db
     networks:
       - financial-microservices
+  eureka-server:
+    image: eureka-server:latest
+    container_name: eureka-server
+    restart: unless-stopped
+    environment:
+      - EUREKA_INSTANCE_HOSTNAME=eureka-server
+    ports:
+      - "8761:8761"
+    networks:
+      - financial-microservices
+
+  bff-service:
+    image: bff-service:latest
+    container_name: bff-service
+    restart: unless-stopped
+    environment:
+      - EUREKA_URL=http://eureka-server:8761/eureka/
+      - KEYCLOAK_ISSUER_URI=http://keycloak:8080/realms/financial-services
+    ports:
+      - "8083:8083"
+    networks:
+      - financial-microservices
+    depends_on:
+      - eureka-server
+
+  product-service:
+    image: product-service:latest
+    container_name: product-service
+    restart: unless-stopped
+    environment:
+      - SPRING_R2DBC_URL=r2dbc:postgresql://db:5432/financialdb
+      - SPRING_R2DBC_USERNAME=myuser
+      - SPRING_R2DBC_PASSWORD=mypassword
+      - EUREKA_URL=http://eureka-server:8761/eureka/
+    ports:
+      - "8082:8082"
+    networks:
+      - financial-microservices
+    depends_on:
+      eureka-server:
+        condition: service_started
+      db:
+        condition: service_started
+
+  client-service:
+    image: client-service:latest
+    container_name: client-service
+    restart: unless-stopped
+    environment:
+      - SPRING_R2DBC_URL=r2dbc:postgresql://db:5432/financialdb
+      - SPRING_R2DBC_USERNAME=myuser
+      - SPRING_R2DBC_PASSWORD=mypassword
+      - EUREKA_URL=http://eureka-server:8761/eureka/
+    ports:
+      - "8081:8081"
+    networks:
+      - financial-microservices
+    depends_on:
+      eureka-server:
+        condition: service_started
+      db:
+        condition: service_started
+
 volumes:
   pgdata:
     driver: local

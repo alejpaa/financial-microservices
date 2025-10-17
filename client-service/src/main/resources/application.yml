@@ -2,11 +2,19 @@ spring:
   application:
     name: client-service
   r2dbc:
-      url: r2dbc:postgresql://localhost:5432/financialdb
-      username: myuser
-      password: mypassword
+      url: ${SPRING_R2DBC_URL:r2dbc:postgresql://localhost:5432/financialdb}
+      username: ${SPRING_R2DBC_USERNAME:myuser}
+      password: ${SPRING_R2DBC_PASSWORD:mypassword}
       pool:
         initial-size: 2
         max-size: 20
+eureka:
+  client:
+    service-url:
+      defaultZone: ${EUREKA_URL:http://localhost:8761/eureka/}
+    register-with-eureka: true
+    fetch-registry: true
+  instance:
+    prefer-ip-address: true
 server:
   port: 8081

@@ -13,8 +13,6 @@ import reactor.core.publisher.Mono;
 public class TrackingInterceptor implements WebFilter {
 
     private static final String TRACKING_ID_KEY = "trackingId";
-    private static final String SERVICE_KEY = "service";
-    private static final String SERVICE_NAME = "PRODUCT-SERVICE";
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
