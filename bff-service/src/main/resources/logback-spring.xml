@@ -42,7 +42,7 @@
     <!-- Configuración por paquetes -->
     <logger name="codes.alem.bffservice.controller" level="INFO"/>
     <logger name="codes.alem.bffservice.service" level="DEBUG"/>
-    <logger name="codes.alem.bffservice.aspect" level="WARN"/>
+    <logger name="codes.alem.bffservice.aspect" level="INFO"/>
 
     <!-- Reducir logs de Spring -->
     <logger name="org.springframework" level="WARN"/>

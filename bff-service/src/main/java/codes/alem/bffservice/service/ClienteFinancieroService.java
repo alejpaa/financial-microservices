@@ -6,13 +6,12 @@ import codes.alem.bffservice.dto.ProductoFinancieroDto;
 import codes.alem.bffservice.mapper.ClienteMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-import reactor.util.context.ContextView; // Importante usar ContextView
+import reactor.util.context.ContextView;
 
 import java.util.List;
 
@@ -21,58 +20,77 @@ import java.util.List;
 @Slf4j
 public class ClienteFinancieroService {
 
-    private static final Logger EXTERNAL_CALLS = LoggerFactory.getLogger("EXTERNAL_CALLS");
     private static final String TRACKING_ID_KEY = "trackingId";
-
     private final WebClient webClient;
     private final EncryptionService encryptionService;
     private final ClienteMapper clienteMapper;
 
     public Mono<ClienteConProductosDto> obtenerClienteConProductos(String codigoUnicoEncriptado) {
-        // 1. Usa deferContextual para "esperar" a que el contexto reactivo esté disponible
         return Mono.deferContextual(contextView -> {
-            // 2. Extrae el trackingId del contexto, NO del MDC
+            // Extraer trackingId del Reactor Context
             String trackingId = contextView.get(TRACKING_ID_KEY);
+
+            // Configurar el MDC para logs dentro de este bloque
+            MDC.put(TRACKING_ID_KEY, trackingId);
+            log.info("🔄 Iniciando consolidación de cliente y productos");
+
+            // 3️⃣ Lógica principal
             String codigoUnico = encryptionService.decrypt(codigoUnicoEncriptado);
-
-            EXTERNAL_CALLS.info("🔄 Consultando cliente y productos para código: {}", codigoUnico);
-
-            Mono<ClienteDto> clienteMono = obtenerCliente(codigoUnico, trackingId);
-            Flux<ProductoFinancieroDto> productosFlux = obtenerProductosFinancieros(codigoUnico, trackingId);
+            Mono<ClienteDto> clienteMono = obtenerCliente(codigoUnico);
+            Flux<ProductoFinancieroDto> productosFlux = obtenerProductosFinancieros(codigoUnico);
 
             return clienteMono.zipWith(productosFlux.collectList())
                     .map(tuple -> {
                         ClienteDto cliente = tuple.getT1();
                         List<ProductoFinancieroDto> productos = tuple.getT2();
 
-                        EXTERNAL_CALLS.info("✨ Consolidando respuesta: {} productos para {}",
-                                productos.size(), cliente.getNombres());
-
+                        log.info(" Consolidando {} productos", productos.size());
                         return clienteMapper.toClienteConProductos(cliente, productos);
+                    })
+                    .doFinally(signalType -> {
+                        MDC.clear();
                     });
         });
     }
 
-    // 3. Modifica los métodos privados para que acepten el trackingId como parámetro
-    private Mono<ClienteDto> obtenerCliente(String codigoUnico, String trackingId) {
-        EXTERNAL_CALLS.debug("→ Llamando CLIENT-SERVICE");
-        return webClient.get()
-                .uri("http://client-service/api/clientes/{codigoUnico}", codigoUnico)
-                .header("X-Tracking-ID", trackingId) // Ahora usas el parámetro
-                .retrieve()
-                .bodyToMono(ClienteDto.class)
-                .doOnSuccess(cliente -> EXTERNAL_CALLS.debug("← CLIENT-SERVICE: OK"))
-                .doOnError(error -> EXTERNAL_CALLS.error("← CLIENT-SERVICE: ERROR - {}", error.getMessage()));
+    private Mono<ClienteDto> obtenerCliente(String codigoUnico) {
+        return Mono.deferContextual(ctx -> {
+            String trackingId = ctx.get(TRACKING_ID_KEY);
+            MDC.put(TRACKING_ID_KEY, trackingId);
+            log.debug("→ Llamando CLIENT-SERVICE");
+
+            return webClient.get()
+                    .uri("http://client-service/api/clientes/{codigoUnico}", codigoUnico)
+                    .header("X-Tracking-ID", trackingId)
+                    .retrieve()
+                    .bodyToMono(ClienteDto.class)
+                    .doOnEach(sig -> restoreMdcFromContext(ctx))
+                    .doOnSuccess(c -> log.info("← CLIENT-SERVICE OK"))
+                    .doOnError(e -> log.error("← CLIENT-SERVICE ERROR  {}", e.getMessage()))
+                    .doFinally(st -> MDC.clear());
+        });
     }
 
-    private Flux<ProductoFinancieroDto> obtenerProductosFinancieros(String codigoUnico, String trackingId) {
-        EXTERNAL_CALLS.debug("→ Llamando PRODUCT-SERVICE");
-        return webClient.get()
-                .uri("http://product-service/api/productos/{codigoUnico}", codigoUnico)
-                .header("X-Tracking-ID", trackingId) // Y aquí también
-                .retrieve()
-                .bodyToFlux(ProductoFinancieroDto.class)
-                .doOnComplete(() -> EXTERNAL_CALLS.debug("← PRODUCT-SERVICE: OK"))
-                .doOnError(error -> EXTERNAL_CALLS.error("← PRODUCT-SERVICE: ERROR - {}", error.getMessage()));
+    private Flux<ProductoFinancieroDto> obtenerProductosFinancieros(String codigoUnico) {
+        return Flux.deferContextual(ctx -> {
+            String trackingId = ctx.get(TRACKING_ID_KEY);
+            MDC.put(TRACKING_ID_KEY, trackingId);
+            log.debug("→ Llamando PRODUCT-SERVICE");
+
+            return webClient.get()
+                    .uri("http://product-service/api/productos/{codigoUnico}", codigoUnico)
+                    .header("X-Tracking-ID", trackingId)
+                    .retrieve()
+                    .bodyToFlux(ProductoFinancieroDto.class)
+                    .doOnEach(sig -> restoreMdcFromContext(ctx))
+                    .doOnComplete(() -> log.info("← PRODUCT-SERVICE OK"))
+                    .doOnError(e -> log.error("← PRODUCT-SERVICE ERROR [{}] {}", trackingId, e.getMessage()))
+                    .doFinally(st -> MDC.clear());
+        });
+    }
+
+    private void restoreMdcFromContext(ContextView ctx) {
+        ctx.<String>getOrEmpty(TRACKING_ID_KEY)
+                .ifPresent(id -> MDC.put(TRACKING_ID_KEY, id));
     }
 }
